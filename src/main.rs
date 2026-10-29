@@ -795,7 +795,7 @@ fn run_cli() {
 
     // Build generation options
     let luanti_game = if args.luanti {
-        Some(luanti_block_map::LuantiGame::Mineclonia)
+        Some(args.luanti_game)
     } else {
         None
     };

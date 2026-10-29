@@ -38,6 +38,10 @@ pub struct Args {
     #[arg(long)]
     pub luanti: bool,
 
+    /// Game pack the Luanti world is written for (with --luanti)
+    #[arg(long, value_enum, default_value_t = crate::luanti_block_map::LuantiGame::Mineclonia)]
+    pub luanti_game: crate::luanti_block_map::LuantiGame,
+
     /// How Overpass is queried when the data comes from there: requests (built in), curl or
     /// wget
     #[arg(long, default_value = "requests")]

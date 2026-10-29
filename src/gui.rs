@@ -1636,6 +1636,7 @@ fn gui_start_generation(
                 path: Some(world_path.clone()),
                 bedrock: world_format == WorldFormat::BedrockMcWorld,
                 luanti: world_format == WorldFormat::LuantiWorld,
+                luanti_game: luanti_game.unwrap_or_default(),
                 downloader: "requests".to_string(),
                 scale: world_scale,
                 height_multiplier,
