@@ -89,6 +89,15 @@ impl GroundFrame {
     }
 
     pub fn from_args(args: &Args, bbox: &LLBBox) -> Self {
+        let mut frame = Self::from_args_inner(args, bbox);
+        // Luanti has no build height to fit: Y is the real altitude.
+        if args.luanti && args.one_world_run.is_none() {
+            frame.affine = AffinePolicy::Absolute;
+        }
+        frame
+    }
+
+    fn from_args_inner(args: &Args, bbox: &LLBBox) -> Self {
         let spec = crate::projection::ProjectionSpec::from_args(args);
         if spec.kind == crate::projection::ProjectionKind::Local {
             return Self::local();

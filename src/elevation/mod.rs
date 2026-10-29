@@ -456,7 +456,7 @@ pub fn fetch_elevation_data(
     } = band;
     // The models stand at world scale, not at the terrain's compressed one.
     let top_reserve = match affine {
-        AffinePolicy::Fixed(_) => 0,
+        AffinePolicy::Fixed(_) | AffinePolicy::Absolute => 0,
         _ => top_reserve_for(
             &height_grid,
             &peaks::model_cells(&height_grid, bbox, &hints.tall_models),

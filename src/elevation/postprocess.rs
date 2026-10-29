@@ -2719,6 +2719,9 @@ pub enum AffinePolicy {
     FitWithHeadroom,
     /// Reuse a stored mapping. Later One World areas.
     Fixed(ElevationAffine),
+    /// Y is the real altitude above sea level times the scale. No fitting or compression;
+    /// the base is the lowest terrain, never below `min_ground_level`. Luanti only.
+    Absolute,
 }
 
 /// Most headroom `FitWithHeadroom` keeps below the lowest cell.
@@ -3115,6 +3118,30 @@ pub fn scale_to_minecraft_reserving(
                 );
             }
             affine
+        }
+        AffinePolicy::Absolute => {
+            let lowest = blurred_heights
+                .iter()
+                .flatten()
+                .copied()
+                .filter(|h| h.is_finite())
+                .fold(f64::MAX, f64::min);
+            let wanted = if lowest == f64::MAX || scale <= 0.0 {
+                0.0
+            } else {
+                (lowest * scale).floor().min(0.0)
+            };
+            let base = (wanted as i32).max(min_ground_level.min(ground_level));
+            eprintln!(
+                "Absolute elevation: Y = altitude x {scale}, terrain base at Y {base}, ceiling Y {}",
+                upper_clamp as i32
+            );
+            ElevationAffine {
+                min_height_m: if scale > 0.0 { base as f64 / scale } else { 0.0 },
+                blocks_per_meter: scale,
+                ground_level: base,
+                soft_top: None,
+            }
         }
         AffinePolicy::Fixed(affine) => {
             eprintln!(
@@ -4482,5 +4509,25 @@ mod luanti_range_tests {
         let max = mc.iter().flatten().cloned().fold(f64::MIN, f64::max);
         assert!((bpm - 1.0).abs() < 1e-9, "{bpm}");
         assert!(max > 2900.0, "{max}");
+    }
+}
+
+#[cfg(test)]
+mod absolute_tests {
+    use super::*;
+
+    #[test]
+    fn absolute_policy_maps_altitude_straight_to_y() {
+        let grid = vec![vec![1100.0, 1500.0], vec![2500.0, 3500.0]];
+        let (mc, affine) = scale_to_minecraft_with(
+            &grid, 1.0, -62, -29998, true, 30975, AffinePolicy::Absolute,
+        );
+        assert_eq!(mc[0][0], 1100.0);
+        assert_eq!(mc[1][1], 3500.0);
+        assert!((affine.y_for_metres(2000.0) - 2000.0).abs() < 1e-9);
+        let (mc, _) = scale_to_minecraft_with(
+            &grid, 0.5, -62, -29998, true, 30975, AffinePolicy::Absolute,
+        );
+        assert_eq!(mc[1][1], 1750.0);
     }
 }
