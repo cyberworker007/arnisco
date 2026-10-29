@@ -23,7 +23,7 @@ pub(crate) use common::FLOOR_TEST_LOCK;
 pub use common::{
     base_chunk_block, base_chunk_y, min_y, set_base_chunk_block, set_base_chunk_y,
     set_terrain_floor_y, set_world_bounds, terrain_floor_y, world_max_y, world_section_range,
-    DEFAULT_MAX_Y, DEFAULT_MIN_Y,
+    DEFAULT_MAX_Y, DEFAULT_MIN_Y, LUANTI_MAX_Y, LUANTI_MIN_Y,
 };
 pub(crate) use common::{
     reset_section_counters, section_counters, BlockStorage, CoordMap, RegionToModify,
@@ -2544,8 +2544,8 @@ impl<'a> WorldEditor<'a> {
         &mut self,
         chunk_x: i32,
         chunk_z: i32,
-        section_y_min: i8,
-        section_y_max: i8,
+        section_y_min: i16,
+        section_y_max: i16,
         block: Block,
     ) -> bool {
         // chunk coords -> block coords for the region check (chunk << 4).

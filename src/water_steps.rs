@@ -90,7 +90,7 @@ fn is_wet(section: &SectionToModify, idx: usize) -> bool {
 
 /// Whether the block at `y` in a column holds water.
 fn wet_at(chunk: &ChunkToModify, lx: u8, y: i32, lz: u8) -> bool {
-    let Some(section) = i8::try_from(y >> 4)
+    let Some(section) = i16::try_from(y >> 4)
         .ok()
         .and_then(|sy| chunk.sections.get(sy))
     else {
@@ -303,7 +303,7 @@ fn scan(
     }
     bands.into_par_iter().for_each(|(cz, band)| {
         let z0 = (cz << 4).max(win.z0);
-        let mut wet_sections: Vec<i8> = Vec::new();
+        let mut wet_sections: Vec<i16> = Vec::new();
         for cx in (win.x0 >> 4)..=(win.x1 >> 4) {
             if skip((cx >> 5, cz >> 5)) {
                 continue;
@@ -347,7 +347,7 @@ fn scan(
 }
 
 /// Topmost wet run in one column, searched through the sections that hold water.
-fn column(chunk: &ChunkToModify, wet_sections: &[i8], lx: u8, lz: u8) -> Col {
+fn column(chunk: &ChunkToModify, wet_sections: &[i16], lx: u8, lz: u8) -> Col {
     for &sy in wet_sections.iter().rev() {
         let Some(section) = chunk.sections.get(sy) else {
             continue;

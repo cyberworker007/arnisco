@@ -4468,3 +4468,19 @@ mod top_reserve_tests {
         assert!(top <= LIMIT, "top {top} with reserve {reserve}");
     }
 }
+
+#[cfg(test)]
+mod luanti_range_tests {
+    use super::*;
+
+    #[test]
+    fn luanti_band_keeps_a_3000_m_relief_uncompressed() {
+        let grid: Vec<Vec<f64>> = (0..8)
+            .map(|z| (0..8).map(|x| 500.0 + (x + z) as f64 * (3000.0 / 14.0)).collect())
+            .collect();
+        let (mc, _, bpm, _) = scale_to_minecraft(&grid, 1.0, -62, -29998, true, 30975);
+        let max = mc.iter().flatten().cloned().fold(f64::MIN, f64::max);
+        assert!((bpm - 1.0).abs() < 1e-9, "{bpm}");
+        assert!(max > 2900.0, "{max}");
+    }
+}

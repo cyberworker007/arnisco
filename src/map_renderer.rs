@@ -141,7 +141,7 @@ impl PreviewAccumulator {
             if cbx + 15 < x0 || cbx > x1 || cbz + 15 < z0 || cbz > z1 {
                 continue;
             }
-            let mut sections: Vec<(i8, &SectionToModify)> = chunk.sections.iter().collect();
+            let mut sections: Vec<(i16, &SectionToModify)> = chunk.sections.iter().collect();
             if sections.is_empty() {
                 continue;
             }
@@ -249,7 +249,7 @@ impl PreviewAccumulator {
 }
 
 /// Topmost non-transparent block color and world Y, sections pre-sorted by Y descending.
-fn top_block_color(sections: &[(i8, &SectionToModify)], x: u8, z: u8) -> Option<(Rgb<u8>, i32)> {
+fn top_block_color(sections: &[(i16, &SectionToModify)], x: u8, z: u8) -> Option<(Rgb<u8>, i32)> {
     for (section_y, section) in sections {
         match &section.storage {
             BlockStorage::Uniform(b) => {

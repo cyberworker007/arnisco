@@ -424,14 +424,14 @@ pub fn generate_ground_region(
                     let bottom_section = terrain_floor_y().div_euclid(16);
                     // section_top = section_y*16 + 15 <= min_ground_y - 3
                     let top_section = (min_ground_y - 18).div_euclid(16);
-                    let in_i8 = (i8::MIN as i32..=i8::MAX as i32).contains(&bottom_section)
-                        && (i8::MIN as i32..=i8::MAX as i32).contains(&top_section);
+                    let in_i8 = (i16::MIN as i32..=i16::MAX as i32).contains(&bottom_section)
+                        && (i16::MIN as i32..=i16::MAX as i32).contains(&top_section);
                     if in_i8 && top_section >= bottom_section {
                         let all_clean = editor.bulk_fill_chunk_sections_below(
                             chunk_x,
                             chunk_z,
-                            bottom_section as i8,
-                            top_section as i8,
+                            bottom_section as i16,
+                            top_section as i16,
                             STONE,
                         );
                         if all_clean {

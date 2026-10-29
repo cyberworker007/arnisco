@@ -405,7 +405,7 @@ impl Column {
         let index = SectionToModify::index(self.lx, (y & 15) as u8, self.lz);
         chunk
             .sections
-            .get((y >> 4) as i8)
+            .get((y >> 4) as i16)
             .and_then(|s| s.properties.get(&index).cloned())
             .or_else(|| block.properties().map(intern_props))
     }
@@ -433,7 +433,7 @@ impl Column {
 
     /// Highest block of the column and its height.
     fn top(self, chunk: &ChunkToModify) -> Option<(i32, Block)> {
-        let mut sections: Vec<i8> = chunk.sections.keys().collect();
+        let mut sections: Vec<i16> = chunk.sections.keys().collect();
         sections.sort_unstable_by(|a, b| b.cmp(a));
         for sy in sections {
             let Some(section) = chunk.sections.get(sy) else {

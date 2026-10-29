@@ -1520,13 +1520,13 @@ fn filler_block_for(body: CelestialBody) -> crate::block_definitions::Block {
 
 /// Per-format build-height cap when the user opts into extended build height:
 /// 2031 for the Java datapack, 512 for the Bedrock behavior pack, and the vanilla
-/// ceiling for Luanti, which has no pack and whose spawn search only scans the
-/// vanilla range. Must stay gated like `world_top_y_for` / `extended_min_y_for`.
+/// ceiling for Luanti, which has no pack and is bounded only by the engine's map limit
+/// (see `LUANTI_MAX_Y`). Must stay gated like `world_top_y_for` / `extended_min_y_for`.
 pub(crate) fn extended_max_y_for(args: &Args) -> i32 {
     if args.bedrock {
         512
     } else if args.luanti {
-        crate::world_editor::DEFAULT_MAX_Y
+        crate::world_editor::LUANTI_MAX_Y
     } else {
         2031
     }
@@ -1547,7 +1547,9 @@ pub(crate) fn world_top_y_for(args: &Args) -> i32 {
 
 /// `world_top_y_for` with the extended height on or off.
 pub(crate) fn world_top_y(args: &Args, extended: bool) -> i32 {
-    if !extended || args.luanti {
+    if args.luanti {
+        crate::world_editor::LUANTI_MAX_Y
+    } else if !extended {
         crate::world_editor::DEFAULT_MAX_Y
     } else if args.bedrock {
         511
@@ -1562,7 +1564,9 @@ pub(crate) fn extended_min_y_for(args: &Args) -> i32 {
 
 /// `extended_min_y_for` with the extended height on or off.
 pub(crate) fn world_min_y(args: &Args, extended: bool) -> i32 {
-    if extended && !args.bedrock && !args.luanti {
+    if args.luanti {
+        crate::world_editor::LUANTI_MIN_Y
+    } else if extended && !args.bedrock {
         -2032
     } else {
         crate::world_editor::DEFAULT_MIN_Y
@@ -2070,9 +2074,10 @@ mod tests {
         let luanti = args(&["--luanti"]);
         assert_eq!(
             extended_max_y_for(&luanti),
-            crate::world_editor::DEFAULT_MAX_Y
+            crate::world_editor::LUANTI_MAX_Y
         );
-        assert_eq!(world_top_y_for(&luanti), crate::world_editor::DEFAULT_MAX_Y);
+        assert_eq!(world_top_y_for(&luanti), crate::world_editor::LUANTI_MAX_Y);
+        assert_eq!(extended_min_y_for(&luanti), crate::world_editor::LUANTI_MIN_Y);
     }
 
     fn parse(extra: &[&str]) -> Args {

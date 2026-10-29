@@ -755,6 +755,16 @@ pub fn apply_feature_needs(args: &mut Args) {
 /// CLI and the GUI so the two cannot disagree about what Moon/Mars means, or
 /// what a blueprint leaves out.
 pub fn apply_body_defaults(args: &mut Args) {
+    apply_body_defaults_inner(args);
+    // Luanti has no build height pack: its height is only the engine's map limit, so the
+    // terrain is never compressed into vanilla's 384 blocks.
+    if args.luanti {
+        args.disable_height_limit = true;
+        args.vanilla_height = false;
+    }
+}
+
+fn apply_body_defaults_inner(args: &mut Args) {
     apply_mode_defaults(args);
     if args.body.is_earth() {
         return;
@@ -1348,8 +1358,6 @@ mod tests {
         };
 
         for flags in [
-            &["--luanti"][..],
-            &["--luanti", "--disable-height-limit"][..],
             &["--bedrock", "--vanilla-height"][..],
             &["--body", "moon"][..],
         ] {
@@ -1358,6 +1366,13 @@ mod tests {
             assert!(gl(flags, 305).is_err(), "{flags:?} accepted 305");
             assert!(gl(flags, -63).is_err(), "{flags:?} accepted -63");
         }
+
+        // Luanti has no pack; only the engine's map limit bounds it.
+        assert!(gl(&["--luanti"], -62).is_ok());
+        assert!(gl(&["--luanti"], 30960).is_ok());
+        assert!(gl(&["--luanti"], 30961).is_err());
+        assert!(gl(&["--luanti"], -29998).is_ok());
+        assert!(gl(&["--luanti"], -29999).is_err());
 
         // Bedrock's behavior pack raises the ceiling to 511 but leaves the floor vanilla.
         for bedrock in [

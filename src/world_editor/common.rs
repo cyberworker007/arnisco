@@ -17,6 +17,14 @@ pub const TERRAIN_FLOOR_DEPTH: i32 = 64;
 /// Default (vanilla 1.18+) world ceiling; the editor stores nothing above `world_max_y()`.
 pub const DEFAULT_MAX_Y: i32 = 319;
 
+/// Luanti world floor. The engine generates and loads nothing past ±31000 nodes; a multiple
+/// of 16 so it starts a mapblock.
+pub const LUANTI_MIN_Y: i32 = -30000;
+
+/// Luanti world ceiling. Ends a mapblock, and leaves room under 31000 for the air mapblocks
+/// written above the world.
+pub const LUANTI_MAX_Y: i32 = 30975;
+
 static WORLD_MIN_Y: AtomicI32 = AtomicI32::new(DEFAULT_MIN_Y);
 static WORLD_MAX_Y: AtomicI32 = AtomicI32::new(DEFAULT_MAX_Y);
 
@@ -70,8 +78,8 @@ pub fn world_section_range() -> (i8, i8) {
 /// Lowest section index covering `min_y()`. Callers derive their own bottom section from the
 /// terrain floor instead, so this only serves the tests.
 #[cfg(test)]
-pub fn min_section_y() -> i8 {
-    (min_y() >> 4) as i8
+pub fn min_section_y() -> i16 {
+    (min_y() >> 4) as i16
 }
 
 /// Default terrain base (the vanilla -64 floor plus its bedrock layer).
@@ -795,14 +803,14 @@ fn make_palette_item(block: Block, stored_props: Option<&Arc<Value>>) -> Palette
     }
 }
 
-fn make_section(y: i8, palette: Vec<PaletteItem>, data: Option<LongArray>) -> Section {
+fn make_section(y: i16, palette: Vec<PaletteItem>, data: Option<LongArray>) -> Section {
     Section {
         block_states: Blockstates {
             palette,
             data,
             other: FnvHashMap::default(),
         },
-        y,
+        y: y as i8,
         other: FnvHashMap::default(),
     }
 }
@@ -921,7 +929,7 @@ impl SectionToModify {
     }
 
     /// Convert to Java Edition section format
-    pub fn to_section(&self, y: i8) -> Section {
+    pub fn to_section(&self, y: i16) -> Section {
         let count = SECTION_COUNTERS_ON.load(std::sync::atomic::Ordering::Relaxed);
         if count {
             BUILT_SECTIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -1209,30 +1217,30 @@ impl Default for SectionToModify {
 /// index rather than a hash. Iterates in ascending Y.
 #[derive(Default)]
 pub(crate) struct SectionMap {
-    base: i8,
+    base: i16,
     slots: Vec<Option<SectionToModify>>,
 }
 
 impl SectionMap {
     /// Slot of `y`; below `base` it wraps to an out-of-range index.
     #[inline(always)]
-    fn offset(&self, y: i8) -> usize {
+    fn offset(&self, y: i16) -> usize {
         (i32::from(y) - i32::from(self.base)) as usize
     }
 
     #[inline]
-    pub fn get(&self, y: i8) -> Option<&SectionToModify> {
+    pub fn get(&self, y: i16) -> Option<&SectionToModify> {
         self.slots.get(self.offset(y))?.as_ref()
     }
 
     #[inline]
-    pub fn get_mut(&mut self, y: i8) -> Option<&mut SectionToModify> {
+    pub fn get_mut(&mut self, y: i16) -> Option<&mut SectionToModify> {
         let i = self.offset(y);
         self.slots.get_mut(i)?.as_mut()
     }
 
     #[inline]
-    pub fn get_or_default(&mut self, y: i8) -> &mut SectionToModify {
+    pub fn get_or_default(&mut self, y: i16) -> &mut SectionToModify {
         let mut i = self.offset(y);
         if i >= self.slots.len() {
             i = self.grow_to(y);
@@ -1241,7 +1249,7 @@ impl SectionMap {
     }
 
     #[cold]
-    fn grow_to(&mut self, y: i8) -> usize {
+    fn grow_to(&mut self, y: i16) -> usize {
         if self.slots.is_empty() {
             self.base = y;
         } else if y < self.base {
@@ -1257,15 +1265,15 @@ impl SectionMap {
         i
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (i8, &SectionToModify)> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = (i16, &SectionToModify)> + '_ {
         let base = i32::from(self.base);
         self.slots
             .iter()
             .enumerate()
-            .filter_map(move |(i, s)| Some(((base + i as i32) as i8, s.as_ref()?)))
+            .filter_map(move |(i, s)| Some(((base + i as i32) as i16, s.as_ref()?)))
     }
 
-    pub fn keys(&self) -> impl Iterator<Item = i8> + '_ {
+    pub fn keys(&self) -> impl Iterator<Item = i16> + '_ {
         self.iter().map(|(y, _)| y)
     }
 
@@ -1277,12 +1285,12 @@ impl SectionMap {
         self.slots.iter_mut().flatten()
     }
 
-    pub fn into_entries(self) -> impl Iterator<Item = (i8, SectionToModify)> {
+    pub fn into_entries(self) -> impl Iterator<Item = (i16, SectionToModify)> {
         let base = i32::from(self.base);
         self.slots
             .into_iter()
             .enumerate()
-            .filter_map(move |(i, s)| Some(((base + i as i32) as i8, s?)))
+            .filter_map(move |(i, s)| Some(((base + i as i32) as i16, s?)))
     }
 
     pub fn len(&self) -> usize {
@@ -1309,7 +1317,7 @@ impl ChunkToModify {
             return None;
         }
         let y = y.max(min_y());
-        let section_idx: i8 = (y >> 4) as i8;
+        let section_idx: i16 = (y >> 4) as i16;
         let section = self.sections.get(section_idx)?;
         section.get_block(x, (y & 15) as u8, z)
     }
@@ -1322,7 +1330,7 @@ impl ChunkToModify {
             return;
         }
         let y = y.max(min_y());
-        let section_idx: i8 = (y >> 4) as i8;
+        let section_idx: i16 = (y >> 4) as i16;
         let section = self.sections.get_or_default(section_idx);
         section.set_block(x, (y & 15) as u8, z, block);
     }
@@ -1339,7 +1347,7 @@ impl ChunkToModify {
             return;
         }
         let y = y.max(min_y());
-        let section_idx: i8 = (y >> 4) as i8;
+        let section_idx: i16 = (y >> 4) as i16;
         let section = self.sections.get_or_default(section_idx);
         section.set_block_with_properties(x, (y & 15) as u8, z, block_with_props);
     }
@@ -1585,7 +1593,7 @@ impl WorldToModify {
         let chunk_z = z >> 4;
         let region = self.get_region(chunk_x >> 5, chunk_z >> 5)?;
         let chunk = region.get_chunk(chunk_x & 31, chunk_z & 31)?;
-        let section = chunk.sections.get((y >> 4) as i8)?;
+        let section = chunk.sections.get((y >> 4) as i16)?;
         let index = SectionToModify::index((x & 15) as u8, (y & 15) as u8, (z & 15) as u8);
         section.properties.get(&index).cloned()
     }
@@ -1613,8 +1621,8 @@ impl WorldToModify {
         let chunk = region.get_chunk(chunk_x & 31, chunk_z & 31)?;
         let local_x = (x & 15) as u8;
         let local_z = (z & 15) as u8;
-        let min_section = (min_y >> 4) as i8;
-        let max_section = (max_y >> 4) as i8;
+        let min_section = (min_y >> 4) as i16;
+        let max_section = (max_y >> 4) as i16;
 
         for section_y in (min_section..=max_section).rev() {
             let Some(section) = chunk.sections.get(section_y) else {
@@ -1673,7 +1681,7 @@ impl WorldToModify {
                 .regions
                 .get_mut(&(chunk_x >> 5, chunk_z >> 5))
                 .and_then(|r| r.chunks.get_mut(chunk_x & 31, chunk_z & 31))
-                .and_then(|c| c.sections.get_mut((clamped_y >> 4) as i8));
+                .and_then(|c| c.sections.get_mut((clamped_y >> 4) as i16));
             if let Some(section) = section {
                 let (lx, ly, lz) = ((x & 15) as u8, (clamped_y & 15) as u8, (z & 15) as u8);
                 let existing = section.storage.get(SectionToModify::index(lx, ly, lz));
@@ -1723,7 +1731,7 @@ impl WorldToModify {
             return false;
         }
         let y = y.max(min_y());
-        let section_idx: i8 = (y >> 4) as i8;
+        let section_idx: i16 = (y >> 4) as i16;
         let section = chunk.sections.get_or_default(section_idx);
 
         let local_x = (x & 15) as u8;
@@ -1774,7 +1782,7 @@ impl WorldToModify {
         let y_max = y_max.clamp(min_y(), world_max_y());
 
         for y in y_min..=y_max {
-            let section_idx: i8 = (y >> 4) as i8;
+            let section_idx: i16 = (y >> 4) as i16;
             let section = chunk.sections.get_or_default(section_idx);
             let local_y = (y & 15) as u8;
             let idx = SectionToModify::index(local_x, local_y, local_z);
@@ -1815,7 +1823,7 @@ impl WorldToModify {
         let y_max = y_max.clamp(min_y(), world_max_y());
         let mut y = y_min.clamp(min_y(), world_max_y());
         while y <= y_max {
-            let section = chunk.sections.get_or_default((y >> 4) as i8);
+            let section = chunk.sections.get_or_default((y >> 4) as i16);
             let top = y_max.min(y | 15);
             for y in y..=top {
                 let block = block_at(y);
@@ -1835,8 +1843,8 @@ impl WorldToModify {
         &mut self,
         chunk_x: i32,
         chunk_z: i32,
-        section_y_min: i8,
-        section_y_max: i8,
+        section_y_min: i16,
+        section_y_max: i16,
         block: Block,
     ) -> bool {
         if section_y_max < section_y_min {
@@ -2638,7 +2646,7 @@ mod merge_fast_path_tests {
         let mut rng = Lcg(0xc0ffee);
         for case in 0..300u64 {
             let mut chunk = ChunkToModify::default();
-            for y in -4i8..6 {
+            for y in -4i16..6 {
                 if rng.below(3) == 0 {
                     continue;
                 }
@@ -2817,7 +2825,7 @@ mod tests {
         let region = world.get_region(0, 0).unwrap();
         let chunk = region.get_chunk(0, 0).unwrap();
         // Section -4 and -3 should be Uniform(STONE)
-        for y in [-4i8, -3] {
+        for y in [-4i16, -3] {
             let section = chunk.sections.get(y).unwrap();
             assert!(
                 matches!(&section.storage, BlockStorage::Uniform(b) if *b == STONE),
@@ -2958,7 +2966,7 @@ mod tests {
     fn set_with_props_if_absent_stores_and_omits_properties() {
         let mut world = WorldToModify::default();
         // y=64 → section index 4, local_y 0.
-        let section_idx = 4i8;
+        let section_idx = 4i16;
         let local_y = (64 & 15) as u8;
 
         let with_props = BlockWithProperties {

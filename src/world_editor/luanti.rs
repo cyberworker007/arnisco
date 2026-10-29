@@ -3,7 +3,7 @@ use crate::coordinate_system::cartesian::XZBBox;
 use crate::coordinate_system::geographic::LLBBox;
 use crate::luanti_block_map::{to_luanti_node, LuantiGame};
 use crate::progress::emit_gui_progress_update;
-use crate::world_editor::common::{min_y, WorldToModify};
+use crate::world_editor::common::{min_y, world_max_y, WorldToModify};
 use colored::Colorize;
 use fastnbt::Value;
 use rayon::prelude::*;
@@ -196,7 +196,7 @@ fn find_safe_spawn(
 ) -> (i32, i32, i32) {
     use crate::block_definitions::*;
     let non_ground = non_ground_blocks();
-    let y_max = ground_level + 400;
+    let y_max = world_max_y();
     for radius in 0i32..=40 {
         for dx in -radius..=radius {
             for dz in -radius..=radius {
@@ -243,7 +243,7 @@ fn find_spawn_y_at_column(
     use crate::block_definitions::*;
     let non_ground = non_ground_blocks();
     let y_min = (ground_level - 100).max(min_y());
-    let y_max = ground_level + 400;
+    let y_max = world_max_y();
     let clear = |b: Option<crate::block_definitions::Block>| -> bool {
         b.is_none() || b == Some(AIR) || non_ground.contains(&b.unwrap())
     };

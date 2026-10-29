@@ -401,7 +401,7 @@ impl WorldSizeOptions {
             dh_lod: args.dh_lod,
             caves: args.caves,
             fillground: args.fillground,
-            tall: args.disable_height_limit,
+            tall: args.disable_height_limit && !args.luanti,
         }
     }
 }

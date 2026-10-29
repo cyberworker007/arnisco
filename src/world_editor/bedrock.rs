@@ -916,7 +916,7 @@ impl BedrockWriter {
             .filter(|((x, y, z), _, _)| {
                 x >> 4 == abs_chunk_x
                     && z >> 4 == abs_chunk_z
-                    && chunk.sections.get((y >> 4) as i8).is_some()
+                    && chunk.sections.get((y >> 4) as i16).is_some()
                     && chunk
                         .get_block((x & 15) as u8, *y, (z & 15) as u8)
                         .is_none()
@@ -935,7 +935,7 @@ impl BedrockWriter {
 
         // Subchunks.
         let mut pots = Vec::new();
-        for (section_y, section) in chunk.sections.iter() {
+        for (section_y, section) in chunk.sections.iter().map(|(y, s)| (y as i8, s)) {
             let (bytes, section_pots) =
                 self.encode_subchunk(section, section_y, overrides.get(&section_y))?;
             pots.extend(section_pots.into_iter().map(|(index, plant)| {
