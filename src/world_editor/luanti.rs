@@ -368,8 +368,8 @@ fn write_map_meta(
     let mut f = fs::File::create(world_dir.join("map_meta.txt"))?;
     writeln!(f, "mg_name = singlenode")?;
     writeln!(f, "seed = 0")?;
-    if game == LuantiGame::Mineclonia {
-        // Tell Mineclonia not to activate its custom levelgen system,
+    if game == LuantiGame::VoxeLibre {
+        // Tell VoxeLibre not to activate its custom levelgen system,
         // so it won't generate terrain over our pre-built map.
         writeln!(f, "mcl_singlenode_mapgen = false")?;
     }
@@ -408,8 +408,8 @@ fn write_worldmod(
     )?;
     writeln!(mc, "optional_depends = mcl_spawn")?;
 
-    if game == LuantiGame::Mineclonia {
-        // Write mcl_levelgen.conf to inhibit Mineclonia's custom mapgen
+    if game == LuantiGame::VoxeLibre {
+        // Write mcl_levelgen.conf to inhibit VoxeLibre's custom mapgen
         let mut lc = fs::File::create(mod_dir.join("mcl_levelgen.conf"))?;
         writeln!(lc, "disable_mcl_levelgen = true")?;
     }

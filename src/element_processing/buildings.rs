@@ -20285,7 +20285,7 @@ mod style_tests {
             if b == STONE {
                 continue;
             }
-            let node = to_luanti_node(b, LuantiGame::Mineclonia, None);
+            let node = to_luanti_node(b, LuantiGame::VoxeLibre, None);
             assert_ne!(
                 node.name,
                 "mcl_core:stone",

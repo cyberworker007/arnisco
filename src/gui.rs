@@ -1549,7 +1549,7 @@ fn gui_start_generation(
             // Determine world format from UI selection first (needed for session lock decision)
 
             let luanti_game = if world_format.starts_with("luanti") {
-                Some(crate::luanti_block_map::LuantiGame::Mineclonia)
+                Some(crate::luanti_block_map::LuantiGame::VoxeLibre)
             } else {
                 None
             };
@@ -1636,7 +1636,6 @@ fn gui_start_generation(
                 path: Some(world_path.clone()),
                 bedrock: world_format == WorldFormat::BedrockMcWorld,
                 luanti: world_format == WorldFormat::LuantiWorld,
-                luanti_game: luanti_game.unwrap_or_default(),
                 downloader: "requests".to_string(),
                 scale: world_scale,
                 height_multiplier,

@@ -20,15 +20,11 @@ use std::sync::Mutex;
 // unchanged from it.
 
 /// Supported Luanti game pack
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, clap::ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum LuantiGame {
-    /// Mineclonia — Minecraft-like game for Luanti
-    #[default]
-    #[value(name = "mineclonia")]
-    Mineclonia,
     /// VoxeLibre (formerly MineClone2). Uses Mineclonia's node names until its own
     /// mapping exists.
-    #[value(name = "voxelibre")]
+    #[default]
     VoxeLibre,
 }
 
@@ -36,7 +32,6 @@ impl LuantiGame {
     /// Returns the gameid string for world.mt
     pub fn game_id(&self) -> &'static str {
         match self {
-            Self::Mineclonia => "mineclonia",
             Self::VoxeLibre => "VoxeLibre",
         }
     }
@@ -303,7 +298,7 @@ fn conv_chain(block: Block, props: Option<&Value>) -> LuantiNode {
 pub fn to_luanti_node(block: Block, game: LuantiGame, props: Option<&Value>) -> LuantiNode {
     match game {
         // TODO: VoxeLibre node names differ from Mineclonia's.
-        LuantiGame::Mineclonia | LuantiGame::VoxeLibre => to_mineclonia_node(block, props),
+        LuantiGame::VoxeLibre => to_mineclonia_node(block, props),
     }
 }
 
@@ -1069,7 +1064,6 @@ mod game_tests {
 
     #[test]
     fn game_ids_match_the_game_directories() {
-        assert_eq!(LuantiGame::Mineclonia.game_id(), "mineclonia");
         assert_eq!(LuantiGame::VoxeLibre.game_id(), "VoxeLibre");
     }
 }
