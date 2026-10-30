@@ -90,9 +90,9 @@ impl GroundFrame {
 
     pub fn from_args(args: &Args, bbox: &LLBBox) -> Self {
         let mut frame = Self::from_args_inner(args, bbox);
-        // Luanti has no build height to fit: Y is the real altitude.
+        // Luanti has no build height to fit: the map's lowest altitude is Y=0.
         if args.luanti && args.one_world_run.is_none() {
-            frame.affine = AffinePolicy::Absolute;
+            frame.affine = AffinePolicy::MapRelative;
         }
         frame
     }
