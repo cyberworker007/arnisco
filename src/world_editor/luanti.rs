@@ -292,6 +292,11 @@ pub fn save_luanti_world(
     // Convert spawn Z from internal (Z+ = South) to Luanti (Z+ = North)
     let spawn_z = -spawn_z - 1;
 
+    // Centre the map on x = z = 0, in whole mapblocks so the 16-node grid stays aligned.
+    let (mb_shift_x, mb_shift_z) = centering_shift(xzbbox);
+    let spawn_x = spawn_x + mb_shift_x * 16;
+    let spawn_z = spawn_z + mb_shift_z * 16;
+
     // Write world.mt
     write_world_mt(
         world_dir, game, level_name, spawn_x, spawn_y, spawn_z, game_mode,
@@ -317,7 +322,7 @@ pub fn save_luanti_world(
     let _ = fs::remove_file(world_dir.join("mod_storage.sqlite-shm"));
 
     // Write map.sqlite
-    write_map_database(world, world_dir, game)?;
+    write_map_database(world, world_dir, game, (mb_shift_x, mb_shift_z))?;
 
     emit_gui_progress_update(99.0, "Luanti world saved.");
     println!(
@@ -570,10 +575,19 @@ fn serialize_air_mapblock(game: LuantiGame) -> std::io::Result<Vec<u8>> {
     Ok(blob)
 }
 
+/// Mapblock offset that moves the centre of the requested area to the Luanti origin.
+fn centering_shift(xzbbox: &XZBBox) -> (i32, i32) {
+    let centre_x = (xzbbox.min_x() + xzbbox.max_x()) / 2;
+    let centre_z = (xzbbox.min_z() + xzbbox.max_z()) / 2;
+    // Z is flipped between the internal and the Luanti axis, see the mapblock loop below.
+    (-centre_x.div_euclid(16), centre_z.div_euclid(16) + 1)
+}
+
 fn write_map_database(
     world: &WorldToModify,
     world_dir: &Path,
     game: LuantiGame,
+    (mb_shift_x, mb_shift_z): (i32, i32),
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let db_path = world_dir.join("map.sqlite");
 
@@ -613,9 +627,9 @@ fn write_map_database(
                 // region_x * 32 + chunk_x = absolute chunk X = mapblock X
                 // section_y (i8) = mapblock Y
                 // Negate Z: Luanti Z+ = North, internal Z+ = South
-                let mb_x = region_x * 32 + chunk_x;
+                let mb_x = region_x * 32 + chunk_x + mb_shift_x;
                 let orig_z = region_z * 32 + chunk_z;
-                let mb_z = -orig_z - 1;
+                let mb_z = -orig_z - 1 + mb_shift_z;
                 let mb_y = section_y as i32;
                 block_entries.push((mb_x, mb_y, mb_z, section));
                 mb_min_x = mb_min_x.min(mb_x);
@@ -675,6 +689,15 @@ fn write_map_database(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn centering_puts_the_area_centre_on_the_origin() {
+        let bbox = XZBBox::rect_from_xz_lengths(40000.0, 20000.0).unwrap();
+        let (sx, sz) = centering_shift(&bbox);
+        // Centre block (20000, 10000): mapblock 1250 / 625, Luanti z mapblock -626.
+        assert_eq!(1250 + sx, 0);
+        assert_eq!(-625 - 1 + sz, 0);
+    }
 
     #[test]
     fn test_encode_block_pos_origin() {
