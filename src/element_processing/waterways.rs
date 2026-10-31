@@ -136,6 +136,10 @@ fn create_water_channel(
     target_water_y: i32,
 ) {
     const BANK_TOLERANCE: i32 = 2;
+    // Water may sit at most this far above the ground under it. Deeper columns (the
+    // low side of a steep slope) would get a source floating in the air, which flows
+    // over the hillside, so those are left dry.
+    const MAX_WATER_DEPTH: i32 = 1;
     let half_width = width / 2;
 
     for x in (center_x - half_width - 1)..=(center_x + half_width + 1) {
@@ -148,7 +152,9 @@ fn create_water_channel(
                 let ground_y = editor.get_ground_level(x, z);
                 // Only place water where terrain is at or below the water surface,
                 // but allow small elevation steps to avoid gaps on gentle slopes.
-                let water_y = if ground_y <= target_water_y {
+                let water_y = if ground_y < target_water_y - MAX_WATER_DEPTH {
+                    None
+                } else if ground_y <= target_water_y {
                     Some(target_water_y)
                 } else if ground_y <= target_water_y + BANK_TOLERANCE
                     && !editor.block_exists_absolute(x, ground_y, z)
@@ -159,6 +165,19 @@ fn create_water_channel(
                 };
 
                 if let Some(water_y) = water_y {
+                    // Overlapping centreline points ramp to different levels; one sheet per column.
+                    let stacked =
+                        editor.check_for_block_absolute(x, water_y - 1, z, Some(&[WATER]), None)
+                            || editor.check_for_block_absolute(
+                                x,
+                                water_y + 1,
+                                z,
+                                Some(&[WATER]),
+                                None,
+                            );
+                    if stacked {
+                        continue;
+                    }
                     editor.set_block_absolute(WATER, x, water_y, z, None, None);
 
                     // Clear vegetation above the water, a sunflower's top half too.
@@ -250,6 +269,24 @@ mod waterway_profile_tests {
                 (top - local).abs() <= 1,
                 "z={z}: surface {top} does not track the local level {local}"
             );
+        }
+    }
+
+    #[test]
+    fn steep_terrain_gets_no_floating_or_stacked_water() {
+        let bbox = world_bbox();
+        let mut editor = editor_over_slope(&bbox, 40.0, 1.0);
+        generate_waterways(&mut editor, &stream(FIRST_Z, LAST_Z));
+        for z in FIRST_Z..=LAST_Z {
+            for x in (CENTER_X - 6)..=(CENTER_X + 6) {
+                let ys = water_ys(&editor, x, z);
+                let ground = editor.get_ground_level(x, z);
+                assert!(ys.len() <= 1, "stacked water at ({x},{z}): {ys:?}");
+                assert!(
+                    ys.iter().all(|&y| y - ground <= 1),
+                    "floating water at ({x},{z}): {ys:?}, ground {ground}"
+                );
+            }
         }
     }
 
