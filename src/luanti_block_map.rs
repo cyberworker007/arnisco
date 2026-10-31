@@ -470,11 +470,11 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
         202 => "mcl_flowerpots:flower_pot",
         203 => "mcl_ocean:sea_lantern",
         204 => "mcl_stairs:slab_diorite_smooth",
-        205 => "mcl_stairs:slab_warped_hyphae_wood",
-        206 => return conv_stair(props, "mcl_stairs:stair_warped_hyphae_wood"), // WARPED_STAIRS
+        205 => "mcl_farming:beetroot", // BEETROOTS
+        206 => "mcl_farming:wheat_7",  // WHEAT_YOUNG, exported ripe
         207 => "mcl_colorblocks:concrete_green",
         208 => "mcl_walls:brick",
-        209 => "mesecons_torch:redstoneblock",
+        209 => "mcl_farming:carrot_7", // CARROTS_YOUNG, exported ripe
         210 | 362 => return conv_chain(block, props),
         211 => {
             return conv_trapdoor(
@@ -483,8 +483,8 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
                 "mcl_crimson:warped_trapdoor_open",
             )
         } // WARPED_TRAPDOOR
-        212 => "mcl_crimson:stripped_warped_hyphae",
-        213 => "mcl_crimson:stripped_warped_hyphae_bark",
+        212 => "mcl_farming:potato_4", // POTATOES_YOUNG, exported ripe
+        213 => "mcl_farming:beetroot", // BEETROOTS_YOUNG, exported ripe
         214 => "mcl_stairs:slab_stone",
         215 => "mcl_stairs:slab_deepslate_cobbled",
         216 => "mcl_colorblocks:hardened_clay_silver",
@@ -853,6 +853,13 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
         517 => "mcl_core:sandstonesmooth",
         518 => "mcl_raw_ores:raw_gold_block",
         519 => "mcl_core:lapisblock",
+        520 => "mcl_core:redsand",
+        521 => "mcl_core:redsandstone",
+        522 => "mcl_stairs:slab_warped_hyphae_wood",
+        523 => return conv_stair(props, "mcl_stairs:stair_warped_hyphae_wood"), // WARPED_STAIRS
+        524 => "mesecons_torch:redstoneblock",
+        525 => "mcl_crimson:stripped_warped_hyphae",
+        526 => "mcl_crimson:stripped_warped_hyphae_bark",
         _ => "mcl_core:stone",
     };
     LuantiNode {

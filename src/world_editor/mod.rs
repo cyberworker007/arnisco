@@ -214,6 +214,8 @@ pub struct WorldEditor<'a> {
     /// Lift lines and terminals, kept free of trees.
     clear_corridors: Option<Arc<crate::floodfill_cache::CoordinateBitmap>>,
     fuel_index: Option<Arc<crate::element_processing::fuel_stations::FuelIndex>>,
+    /// Water carve depths, so a bore can keep its cover under the bed it will get.
+    water_field: Option<Arc<crate::water_depth::BigWaterField>>,
     format: WorldFormat,
     /// Per-cell overrides for the effective "ground surface" Y returned by
     /// `get_ground_level` / `get_absolute_y`. Roads that flatten their
@@ -275,6 +277,8 @@ pub struct WorldEditor<'a> {
     preview: Option<Arc<crate::map_renderer::PreviewAccumulator>>,
     game_mode: crate::args::GameMode,
     world_time: i64,
+    /// Bedrock only: Java writes it with the rest of its level.dat settings.
+    mob_spawning: crate::args::MobSpawning,
     /// Bedrock only: give the player a starting map that reveals the world as they explore.
     start_with_map: bool,
     /// Bedrock only: the packs that run the moving vehicles.
@@ -319,6 +323,7 @@ impl<'a> WorldEditor<'a> {
             mapped_cranes: None,
             clear_corridors: None,
             fuel_index: None,
+            water_field: None,
             format: WorldFormat::JavaAnvil,
             road_surface_overrides: CoordMap::default(),
             support_columns: FnvHashMap::default(),
@@ -345,6 +350,7 @@ impl<'a> WorldEditor<'a> {
             dh: None,
             game_mode: crate::args::GameMode::Creative,
             world_time: 6000,
+            mob_spawning: crate::args::MobSpawning::Off,
             start_with_map: false,
             bedrock_addon: None,
             size_options: Default::default(),
@@ -383,6 +389,7 @@ impl<'a> WorldEditor<'a> {
             mapped_cranes: None,
             clear_corridors: None,
             fuel_index: None,
+            water_field: None,
             format,
             road_surface_overrides: CoordMap::default(),
             support_columns: FnvHashMap::default(),
@@ -409,6 +416,7 @@ impl<'a> WorldEditor<'a> {
             dh: None,
             game_mode: crate::args::GameMode::Creative,
             world_time: 6000,
+            mob_spawning: crate::args::MobSpawning::Off,
             start_with_map: false,
             bedrock_addon: None,
             size_options: Default::default(),
@@ -447,6 +455,7 @@ impl<'a> WorldEditor<'a> {
             mapped_cranes: None,
             clear_corridors: None,
             fuel_index: None,
+            water_field: None,
             format: WorldFormat::LuantiWorld,
             road_surface_overrides: CoordMap::default(),
             support_columns: FnvHashMap::default(),
@@ -473,6 +482,7 @@ impl<'a> WorldEditor<'a> {
             dh: None,
             game_mode: crate::args::GameMode::Creative,
             world_time: 6000,
+            mob_spawning: crate::args::MobSpawning::Off,
             start_with_map: false,
             bedrock_addon: None,
             size_options: Default::default(),
@@ -577,6 +587,36 @@ impl<'a> WorldEditor<'a> {
 
     pub fn fuel_index(&self) -> Option<Arc<crate::element_processing::fuel_stations::FuelIndex>> {
         self.fuel_index.clone()
+    }
+
+    /// Sets the water carve depths (shared across the main and tile editors).
+    pub fn set_water_field(&mut self, field: Arc<crate::water_depth::BigWaterField>) {
+        self.water_field = Some(field);
+    }
+
+    /// Drops the water carve depths once every bore is laid out.
+    pub fn release_water_field(&mut self) {
+        self.water_field = None;
+    }
+
+    /// Y of the bed the water carve lays at (x, z), or None where it lays none. Read off
+    /// the raw terrain, so every tile that lays out a bore gets the same answer.
+    pub fn carved_bed(&self, x: i32, z: i32) -> Option<i32> {
+        let field = self.water_field.as_deref()?;
+        let ground = self.ground.as_deref()?;
+        let coord = self.ground_point(x, z);
+        crate::water_depth::lc_carved_bed(ground, field, coord, x, z, ground.level(coord))
+    }
+
+    /// The lowest `carved_bed` within `r` of (x, z): the bed a bore that wide has to clear.
+    pub fn lowest_carved_bed(&self, x: i32, z: i32, r: i32) -> Option<i32> {
+        // Most of a tunnel runs nowhere near the water.
+        if !self.water_field.as_ref()?.reaches(x, z, r) {
+            return None;
+        }
+        (-r..=r)
+            .flat_map(|dx| (-r..=r).filter_map(move |dz| self.carved_bed(x + dx, z + dz)))
+            .min()
     }
 
     /// Sets the lift corridors (shared across the main and tile editors).
@@ -753,9 +793,15 @@ impl<'a> WorldEditor<'a> {
         self.void_world = enabled;
     }
 
-    pub fn set_game_settings(&mut self, mode: crate::args::GameMode, world_time: i64) {
+    pub fn set_game_settings(
+        &mut self,
+        mode: crate::args::GameMode,
+        world_time: i64,
+        mob_spawning: crate::args::MobSpawning,
+    ) {
         self.game_mode = mode;
         self.world_time = world_time;
+        self.mob_spawning = mob_spawning;
     }
 
     /// Bedrock only: enable the starting map that reveals the world as the player explores.
@@ -2725,6 +2771,7 @@ impl<'a> WorldEditor<'a> {
         )
         .with_ground_origin((self.ground_origin_x, self.ground_origin_z))
         .with_size_options(self.size_options)
+        .with_mob_spawning(self.mob_spawning)
         .with_addon(self.bedrock_addon.take())
         .write_world(&self.world, self.xzbbox, &self.llbbox)
     }
