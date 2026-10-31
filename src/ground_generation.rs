@@ -44,6 +44,9 @@ const SALT_SWARD: u32 = 0x5A7D_0001;
 const SALT_TALL_SWARD: u32 = 0x5A7D_0002;
 const SALT_WETLAND_POOLS: u32 = 0x9001_5E75;
 
+/// Blocks of rock kept under the surface for Luanti, which has no world floor.
+const LUANTI_FILL_DEPTH: i32 = 32;
+
 /// Per-chunk cache of ground Y values.
 ///
 /// Each Minecraft-chunk worth of surface/vegetation/depth logic fires
@@ -401,7 +404,7 @@ pub fn generate_ground_region(
                     && ground.is_in_rotated_bounds(chunk_max_x, chunk_min_z)
                     && ground.is_in_rotated_bounds(chunk_min_x, chunk_max_z)
                     && ground.is_in_rotated_bounds(chunk_max_x, chunk_max_z);
-                if rotated_in {
+                if rotated_in && !args.luanti {
                     let min_ground_y: i32 = if let Some(ref cache) = chunk_ground_cache {
                         cache
                             .grid
@@ -1415,24 +1418,33 @@ pub fn generate_ground_region(
 
                     // Fill underground; column_fill_y_min skips already-Uniform sections.
                     if args.fillground {
+                        // Luanti has no world floor, and rock all the way down under a
+                        // mountain would be millions of mapblocks: keep a shell only.
+                        let fill_min = if args.luanti {
+                            column_fill_y_min.max(ground_y - LUANTI_FILL_DEPTH)
+                        } else {
+                            column_fill_y_min
+                        };
                         editor.fill_column_absolute(
                             STONE,
                             x,
                             z,
-                            column_fill_y_min,
+                            fill_min,
                             ground_y - 3,
                             true, // skip_existing: don't overwrite blocks placed by element processing
                         );
                     }
                     // Bedrock is a flat plane at the terrain floor, as in vanilla.
-                    editor.set_block_absolute(
-                        BEDROCK,
-                        x,
-                        terrain_floor_y(),
-                        z,
-                        None,
-                        Some(&[BEDROCK]),
-                    );
+                    if !args.luanti {
+                        editor.set_block_absolute(
+                            BEDROCK,
+                            x,
+                            terrain_floor_y(),
+                            z,
+                            None,
+                            Some(&[BEDROCK]),
+                        );
+                    }
 
                     water_memo.forget(x, z);
                     block_counter += 1;
