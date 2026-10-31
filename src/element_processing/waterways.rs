@@ -125,6 +125,29 @@ pub fn waterway_width(waterway_type: &str, tags: &HashMap<String, String>) -> i3
     }
 }
 
+/// Luanti marks river water so it exports as VoxeLibre's river water, which flows only two
+/// nodes and does not renew; plain water spreads seven nodes over a hillside.
+pub const RIVER_WATER_MARK: &str = "arnis_river";
+
+fn place_river_water(editor: &mut WorldEditor, x: i32, y: i32, z: i32) {
+    if editor.format() == crate::world_editor::WorldFormat::LuantiWorld {
+        let props = fastnbt::Value::Compound(HashMap::from([(
+            RIVER_WATER_MARK.to_string(),
+            fastnbt::Value::String("true".to_string()),
+        )]));
+        editor.set_block_with_properties_absolute(
+            BlockWithProperties::new(WATER, Some(props)),
+            x,
+            y,
+            z,
+            None,
+            None,
+        );
+    } else {
+        editor.set_block_absolute(WATER, x, y, z, None, None);
+    }
+}
+
 /// Creates a water channel at a target water level with the given width.
 /// Skips blocks where terrain is above the water surface, with a small tolerance
 /// to avoid gaps on gentle slopes (can create stepped banks).
@@ -197,7 +220,7 @@ fn create_water_channel(
                     if stacked {
                         continue;
                     }
-                    editor.set_block_absolute(WATER, x, water_y, z, None, None);
+                    place_river_water(editor, x, water_y, z);
 
                     // Clear vegetation above the water, a sunflower's top half too.
                     editor.set_block_absolute(AIR, x, water_y + 1, z, Some(PLOT_PLANTS), None);

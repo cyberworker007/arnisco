@@ -355,6 +355,9 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
         84 => "mcl_core:stone",
         85 => "mcl_colorblocks:hardened_clay",
         86 => return conv_stair(props, "mcl_stairs:stair_darkwood"), // DARK_OAK_STAIRS
+        87 if prop_eq(props, crate::element_processing::waterways::RIVER_WATER_MARK, "true") => {
+            "mclx_core:river_water_source"
+        }
         87 => "mcl_core:water_source",
         88 => "mcl_colorblocks:concrete_white",
         89 => "mcl_flowers:azure_bluet",
@@ -994,6 +997,20 @@ mod tests {
         };
         assert_eq!(hook("east").name, "mesecons_button:button_stone_off");
         assert_eq!((hook("east").param2, hook("south").param2), (3, 4));
+    }
+
+    #[test]
+    fn river_water_uses_voxelibre_river_water() {
+        use crate::block_definitions::WATER;
+        let river = Value::Compound(HashMap::from([(
+            crate::element_processing::waterways::RIVER_WATER_MARK.to_string(),
+            Value::String("true".to_string()),
+        )]));
+        assert_eq!(
+            to_voxelibre_node(WATER, Some(&river)).name,
+            "mclx_core:river_water_source"
+        );
+        assert_eq!(to_voxelibre_node(WATER, None).name, "mcl_core:water_source");
     }
 
     #[test]
