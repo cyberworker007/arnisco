@@ -398,7 +398,8 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
         } // JUNGLE_TRAPDOOR
         114 => "mcl_walls:andesite",
         115 => "mcl_walls:stonebrick",
-        116..=125 => "mcl_minecarts:rail",
+        //116..=125 => "mcl_minecarts:rail",
+        116..=125 => "air",
         126 => "mcl_core:coarse_dirt",
         127 => "mcl_core:stone_with_iron",
         128 => "mcl_core:stone_with_coal",
@@ -550,13 +551,16 @@ fn to_voxelibre_node(block: Block, props: Option<&Value>) -> LuantiNode {
         249 => "mcl_core:stone_with_diamond",
         250 => "mcl_core:stone_with_redstone",
         251 => "mcl_core:stone_with_lapis",
-        252 => "mcl_colorblocks:concrete_powder_grey", // GRAY_CONCRETE_POWDER
-        253 => "mcl_colorblocks:hardened_clay_cyan",   // CYAN_TERRACOTTA
+        //252 => "mcl_colorblocks:concrete_powder_grey", // GRAY_CONCRETE_POWDER
+        //253 => "mcl_colorblocks:hardened_clay_cyan",   // CYAN_TERRACOTTA
+        252 => "basic_streets:tar",
+        253 => "basic_streets:tar",
         254 => "mcl_wool:black",                       // BLACK_WOOL
         255 => "mcl_banners:hanging_banner",           // LIGHT_GRAY_WALL_BANNER
         256 => "mesecons_walllever:wall_lever_off",                  // LEVER
         257 => "mcl_grindstone:grindstone",
-        258 => "mcl_minecarts:rail",
+        //258 => "mcl_minecarts:rail",
+        258 => "air",
         259 => "mcl_wool:red",
         260 => "mcl_core:ladder",
         261 => "mcl_wool:yellow",
