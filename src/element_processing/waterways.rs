@@ -139,7 +139,7 @@ fn create_water_channel(
     // Water may sit at most this far above the ground under it. Deeper columns (the
     // low side of a steep slope) would get a source floating in the air, which flows
     // over the hillside, so those are left dry.
-    const MAX_WATER_DEPTH: i32 = 1;
+    const MAX_WATER_DEPTH: i32 = 2;
     let half_width = width / 2;
 
     for x in (center_x - half_width - 1)..=(center_x + half_width + 1) {
@@ -283,7 +283,7 @@ mod waterway_profile_tests {
                 let ground = editor.get_ground_level(x, z);
                 assert!(ys.len() <= 1, "stacked water at ({x},{z}): {ys:?}");
                 assert!(
-                    ys.iter().all(|&y| y - ground <= 1),
+                    ys.iter().all(|&y| y - ground <= 2),
                     "floating water at ({x},{z}): {ys:?}, ground {ground}"
                 );
             }
