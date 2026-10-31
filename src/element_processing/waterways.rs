@@ -142,27 +142,46 @@ fn create_water_channel(
     const MAX_WATER_DEPTH: i32 = 2;
     let half_width = width / 2;
 
+    // The water level a column of this channel would get, if any.
+    let water_at = |editor: &WorldEditor, x: i32, z: i32, own: bool| -> Option<i32> {
+        if (x - center_x).abs().max((z - center_z).abs()) > half_width + 1 {
+            return None;
+        }
+        let ground_y = editor.get_ground_level(x, z);
+        // Only place water where terrain is at or below the water surface,
+        // but allow small elevation steps to avoid gaps on gentle slopes.
+        if ground_y < target_water_y - MAX_WATER_DEPTH {
+            None
+        } else if ground_y <= target_water_y {
+            Some(target_water_y)
+        } else if ground_y <= target_water_y + BANK_TOLERANCE
+            && (!own || !editor.block_exists_absolute(x, ground_y, z))
+        {
+            Some(ground_y)
+        } else {
+            None
+        }
+    };
+
     for x in (center_x - half_width - 1)..=(center_x + half_width + 1) {
         for z in (center_z - half_width - 1)..=(center_z + half_width + 1) {
-            let dx = (x - center_x).abs();
-            let dz = (z - center_z).abs();
-            let distance_from_center = dx.max(dz);
-
-            if distance_from_center <= half_width + 1 {
-                let ground_y = editor.get_ground_level(x, z);
-                // Only place water where terrain is at or below the water surface,
-                // but allow small elevation steps to avoid gaps on gentle slopes.
-                let water_y = if ground_y < target_water_y - MAX_WATER_DEPTH {
-                    None
-                } else if ground_y <= target_water_y {
-                    Some(target_water_y)
-                } else if ground_y <= target_water_y + BANK_TOLERANCE
-                    && !editor.block_exists_absolute(x, ground_y, z)
-                {
-                    Some(ground_y)
-                } else {
-                    None
+            {
+                let water_y = water_at(editor, x, z, true);
+                // On sloped ground the border columns of a channel are where water spills
+                // downhill, so only keep columns whose 8 neighbours are water columns too.
+                let sloped = water_y.is_some() && {
+                    let here = editor.get_ground_level(x, z);
+                    (-1..=1).any(|dx| {
+                        (-1..=1)
+                            .any(|dz| (editor.get_ground_level(x + dx, z + dz) - here).abs() >= 1)
+                    })
                 };
+                let water_y = water_y.filter(|_| {
+                    !sloped
+                        || (-1..=1).all(|dx| {
+                            (-1..=1).all(|dz| water_at(editor, x + dx, z + dz, false).is_some())
+                        })
+                });
 
                 if let Some(water_y) = water_y {
                     // Overlapping centreline points ramp to different levels; one sheet per column.
@@ -288,6 +307,18 @@ mod waterway_profile_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_channel_on_a_slope_keeps_its_middle_but_not_its_border() {
+        let bbox = world_bbox();
+        let mut editor = editor_over_slope(&bbox, 16.0, 0.5);
+        generate_waterways(&mut editor, &stream(FIRST_Z, LAST_Z));
+        assert!(!water_ys(&editor, CENTER_X, 20).is_empty(), "middle is dry");
+        assert!(
+            water_ys(&editor, CENTER_X + 2, 20).is_empty(),
+            "border column on a slope has water"
+        );
     }
 
     #[test]
